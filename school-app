@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Smart School Portal</title>
+
+<style>
+body{margin:0;font-family:Segoe UI;background:#fff5fa;}
+
+/* ✅ LOGIN BACKGROUND IMAGE ADDED */
+.login-container{
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background: url("D:\school image.jpeg") no-repeat center/cover;
+}
+
+.login-box{
+background:rgba(255,255,255,0.95);
+padding:30px;
+border-radius:15px;
+width:320px;
+text-align:center;
+}
+
+.dashboardPage{display:none;}
+.container{display:flex;height:100vh;}
+.sidebar{width:230px;background:#4b0082;color:white;padding:25px;}
+.sidebar a{display:block;color:white;padding:12px;margin-bottom:10px;cursor:pointer;}
+.main{flex:1;padding:20px;overflow-y:auto;}
+.subject{background:white;padding:10px;margin:10px;border-radius:8px;}
+textarea,input{width:95%;padding:5px;margin:5px 0;}
+
+button{
+padding:6px 12px;
+background:#5f2c82;
+color:white;
+border:none;
+border-radius:5px;
+cursor:pointer;
+}
+
+.present{background:green;}
+.absent{background:red;}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div class="login-container" id="loginSection">
+<div class="login-box">
+<h2>Smart School Login</h2>
+
+<select id="roleSelect">
+<option value="student">Student</option>
+<option value="teacher">Teacher</option>
+</select>
+
+<div id="studentFields">
+<input id="studentName" placeholder="Student Name">
+<input id="studentPassInput" type="password" placeholder="Password">
+</div>
+
+<div id="teacherFields" style="display:none;">
+<input id="teacherIdInput" placeholder="Teacher ID">
+<input id="teacherPassInput" type="password" placeholder="Password">
+</div>
+
+<button onclick="login()">Login</button>
+<p id="errorMsg" style="color:red"></p>
+</div>
+</div>
+
+<!-- STUDENT -->
+<div class="dashboardPage" id="studentDashboard">
+<div class="container">
+<div class="sidebar">
+<h2>Student</h2>
+<a onclick="openPage('Homework')">Homework</a>
+<a onclick="openPage('Attendance')">Attendance</a>
+<a onclick="openPage('Examination')">Exams</a>
+<a onclick="openPage('Notice Board')">Notice</a>
+<a onclick="openPage('Fees')">Fees</a>
+<a onclick="openPage('Report Card')">Report Card</a>
+<a onclick="logout()">Logout</a>
+</div>
+<div class="main" id="mainContent"></div>
+</div>
+</div>
+
+<!-- TEACHER -->
+<div class="dashboardPage" id="teacherDashboard">
+<div class="container">
+<div class="sidebar">
+<h2>Teacher</h2>
+<a onclick="openPage('Homework')">Homework</a>
+<a onclick="openPage('Attendance')">Attendance</a>
+<a onclick="openPage('Examination')">Exams</a>
+<a onclick="openPage('Notice Board')">Notice</a>
+<a onclick="openPage('Fees')">Fees</a>
+<a onclick="openPage('Report Card')">Report Card</a>
+<a onclick="logout()">Logout</a>
+</div>
+<div class="main" id="mainContentTeacher"></div>
+</div>
+</div>
+
+<script>
+const STUDENT_PASSWORD="srm12345";
+const TEACHER_ID="teach123";
+const TEACHER_PASSWORD="srm67890";
+
+let currentRole="";
+let currentStudent="";
+
+const subjects=["Tamil","English","Maths","Science","Social"];
+const students={
+"4th":["Arun","Rahul","Anu","Divya"],
+"5th":["Karthik","Vijay","Nisha","Pooja"],
+"6th":["Ajay","Rohan","Meena","Kavya"]
+};
+
+// ROLE SWITCH
+roleSelect.addEventListener("change",function(){
+studentFields.style.display=this.value==="student"?"block":"none";
+teacherFields.style.display=this.value==="teacher"?"block":"none";
+});
+
+// LOGIN
+function login(){
+currentRole=roleSelect.value;
+
+if(currentRole==="student"){
+let name=studentName.value.trim();
+
+if(studentPassInput.value===STUDENT_PASSWORD &&
+Object.values(students).flat().includes(name)){
+
+loginSection.style.display="none";
+studentDashboard.style.display="block";
+currentStudent=name;
+
+}else{
+errorMsg.innerText="Wrong Password or Name";
+}
+}else{
+if(teacherIdInput.value===TEACHER_ID &&
+teacherPassInput.value===TEACHER_PASSWORD){
+
+loginSection.style.display="none";
+teacherDashboard.style.display="block";
+
+}else{
+errorMsg.innerText="Wrong Teacher Login";
+}
+}
+
+openPage("Homework");
+}
+
+// LOGOUT
+function logout(){
+studentDashboard.style.display="none";
+teacherDashboard.style.display="none";
+loginSection.style.display="flex";
+}
+
+// OPEN PAGE
+function openPage(page){
+
+let main = currentRole==="student"
+? document.getElementById("mainContent")
+: document.getElementById("mainContentTeacher");
+
+main.innerHTML="<h2>"+page+"</h2>";
+
+// HOMEWORK
+if(page==="Homework"){
+subjects.forEach(sub=>{
+if(currentRole==="teacher"){
+main.innerHTML+=`${sub}<textarea id="hw_${sub}">${localStorage.getItem("hw_"+sub)||""}</textarea>
+<button onclick="localStorage.setItem('hw_${sub}',document.getElementById('hw_${sub}').value)">Save</button><br>`;
+}else{
+main.innerHTML+=`<div class="subject">${sub}: ${localStorage.getItem("hw_"+sub)||"No Homework"}</div>`;
+}
+});
+}
+
+// ATTENDANCE
+else if(page==="Attendance"){
+if(currentRole==="teacher"){
+let clsSelect=`<select id="classSelect" onchange="loadStudents()">
+<option value="4th">4th</option>
+<option value="5th">5th</option>
+<option value="6th">6th</option>
+</select>`;
+
+main.innerHTML+=clsSelect+`<div id="studentList"></div>`;
+loadStudents();
+
+}else{
+let att = Object.entries(students).find(([cls,list])=>list.includes(currentStudent));
+let cls = att[0];
+
+let status = localStorage.getItem("att_"+cls+"_"+currentStudent) || "Not Marked";
+
+let color="black";
+if(status==="Present") color="green";
+if(status==="Absent") color="red";
+
+main.innerHTML+=`
+<div class='subject'>
+Attendance: <span style="color:${color};font-weight:bold;">${status}</span>
+</div>`;
+}
+}
+
+// EXAM
+else if(page==="Examination"){
+subjects.forEach(sub=>{
+if(currentRole==="teacher"){
+main.innerHTML+=`${sub}<input id="ex_${sub}">
+<button onclick="localStorage.setItem('ex_${sub}',document.getElementById('ex_${sub}').value)">Save</button><br>`;
+}else{
+main.innerHTML+=`<div class="subject">${sub}: ${localStorage.getItem("ex_"+sub)||"N/A"}</div>`;
+}
+});
+}
+
+// NOTICE
+else if(page==="Notice Board"){
+if(currentRole==="teacher"){
+main.innerHTML+=`
+<div class="subject">
+<h3>Edit Notice</h3>
+<textarea id="noticeInput">${localStorage.getItem("school_notice")||""}</textarea>
+<button onclick="saveNotice()">Save Notice</button>
+</div>`;
+}else{
+main.innerHTML+=`
+<div class="subject">
+<h3>School Notice</h3>
+<p>${localStorage.getItem("school_notice")||"No Notice Available"}</p>
+</div>`;
+}
+}
+
+// FEES
+else if(page==="Fees"){
+if(currentRole==="teacher"){
+Object.values(students).flat().forEach(name=>{
+main.innerHTML+=`${name}
+<input id="fee_${name}" value="${localStorage.getItem("fee_"+name)||""}">
+<button onclick="localStorage.setItem('fee_${name}',document.getElementById('fee_${name}').value)">Save</button><br>`;
+});
+}else{
+main.innerHTML+=`<div class="subject">Fees: ${localStorage.getItem("fee_"+currentStudent)||"Not Set"}</div>`;
+}
+}
+
+// REPORT CARD
+else if(page==="Report Card"){
+if(currentRole==="teacher"){
+Object.values(students).flat().forEach(name=>{
+main.innerHTML+=`${name}<br>`+
+subjects.map(sub=>`${sub}: <input id="rep_${name}_${sub}">`).join("<br>")+
+`<button onclick="subjects.forEach(s=>localStorage.setItem('rep_'+ '${name}' +'_'+s,document.getElementById('rep_'+ '${name}' +'_'+s).value))">Save</button><br><br>`;
+});
+}else{
+main.innerHTML+=subjects.map(sub=>`${sub}: ${localStorage.getItem("rep_"+currentStudent+"_"+sub)||"N/A"}`).join("<br>");
+}
+}
+}
+
+// TEACHER ATTENDANCE
+function loadStudents(){
+let cls=document.getElementById("classSelect").value;
+let list=students[cls];
+
+let html="";
+list.forEach(name=>{
+let status=localStorage.getItem("att_"+cls+"_"+name)||"Not Marked";
+
+html+=`
+<div class="subject">
+${name} - ${status}<br>
+<button class="present" onclick="markAttendance('${cls}','${name}','Present')">Present</button>
+<button class="absent" onclick="markAttendance('${cls}','${name}','Absent')">Absent</button>
+</div>`;
+});
+
+document.getElementById("studentList").innerHTML=html;
+}
+
+function markAttendance(cls,name,status){
+localStorage.setItem("att_"+cls+"_"+name,status);
+loadStudents();
+}
+
+function saveNotice(){
+let notice=document.getElementById("noticeInput").value;
+localStorage.setItem("school_notice",notice);
+alert("Notice Updated!");
+}
+</script>
+
+</body>
+</html>
